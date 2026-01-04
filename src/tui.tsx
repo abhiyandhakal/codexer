@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import path from "node:path";
 import { Box, Text, useApp, useInput, render } from "ink";
 import SelectInput, { type Item } from "ink-select-input";
@@ -8,6 +8,7 @@ import type { SessionMeta, SessionNameIndex } from "./sessions.js";
 export type TuiAction =
   | { type: "resume"; session: SessionMeta }
   | { type: "rename"; session: SessionMeta; name: string }
+  | { type: "delete"; session: SessionMeta }
   | { type: "exit" };
 
 type AppProps = {
@@ -17,9 +18,7 @@ type AppProps = {
   onResolve: (action: TuiAction) => void;
 };
 
-type View = "sessions" | "actions" | "rename";
-
-type ActionItem = Item<{ action: "resume" | "rename" | "back" }>;
+type View = "sessions" | "rename" | "delete";
 
 type SessionItem = Item<SessionMeta>;
 
@@ -56,10 +55,26 @@ function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
     }));
   }, [sessions, names, scope]);
 
+  useEffect(() => {
+    if (!selected && sessions.length > 0) {
+      setSelected(sessions[0]);
+    }
+  }, [selected, sessions]);
+
   useInput((input, key) => {
     if (key.escape || input === "q") {
       onResolve({ type: "exit" });
       exit();
+    }
+    if (!selected || view !== "sessions") {
+      return;
+    }
+    if (key.ctrl && input === "r") {
+      setRenameValue(names[selected.id]?.name ?? "");
+      setView("rename");
+    }
+    if (key.ctrl && input === "d") {
+      setView("delete");
     }
   });
 
@@ -90,35 +105,21 @@ function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
     );
   }
 
-  if (view === "actions" && selected) {
-    const items: ActionItem[] = [
-      { label: "Resume session", value: { action: "resume" }, key: "resume" },
-      { label: "Rename session", value: { action: "rename" }, key: "rename" },
-      { label: "Back to list", value: { action: "back" }, key: "back" },
-    ];
-
+  if (view === "delete" && selected) {
     return (
       <Box flexDirection="column" gap={1}>
-        <Text>
-          {formatRow(formatSessionRow(selected, names, scope), undefined)}
-        </Text>
-        <SelectInput
-          items={items}
-          onSelect={(item) => {
-            if (item.value.action === "back") {
-              setView("sessions");
-              return;
-            }
-            if (item.value.action === "rename") {
-              setRenameValue(names[selected.id]?.name ?? "");
-              setView("rename");
-              return;
-            }
-            onResolve({ type: "resume", session: selected });
+        <Text>Delete stored name for {selected.id}?</Text>
+        <Text>{formatRow(formatSessionRow(selected, names, scope), undefined)}</Text>
+        <DeleteConfirmation
+          onConfirm={() => {
+            onResolve({ type: "delete", session: selected });
             exit();
           }}
+          onCancel={() => {
+            setView("sessions");
+          }}
         />
-        <Text dimColor>Use arrows + enter. Press q/esc to exit.</Text>
+        <Text dimColor>Press y to confirm, n to cancel.</Text>
       </Box>
     );
   }
@@ -128,14 +129,37 @@ function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
       <Text>Select a Codex session</Text>
       <SelectInput
         items={sessionItems}
-        onSelect={(item) => {
+        onHighlight={(item) => {
           setSelected(item.value);
-          setView("actions");
+        }}
+        onSelect={(item) => {
+          onResolve({ type: "resume", session: item.value });
+          exit();
         }}
       />
-      <Text dimColor>Use arrows + enter. Press q/esc to exit.</Text>
+      <Text dimColor>
+        Use arrows + enter. Ctrl+r rename, ctrl+d delete, q/esc exit.
+      </Text>
     </Box>
   );
+}
+
+function DeleteConfirmation({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}): JSX.Element {
+  useInput((input) => {
+    if (input === "y" || input === "Y") {
+      onConfirm();
+    }
+    if (input === "n" || input === "N") {
+      onCancel();
+    }
+  });
+  return <Text dimColor>Waiting for input...</Text>;
 }
 
 type SessionRow = {
