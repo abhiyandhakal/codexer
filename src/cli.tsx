@@ -296,9 +296,6 @@ function formatNameTitle(
 ): string {
   const name = names[session.id]?.name;
   const title = session.title ?? "untitled";
-  if (name && name !== title) {
-    return `${name} / ${title}`;
-  }
   return name ?? title;
 }
 

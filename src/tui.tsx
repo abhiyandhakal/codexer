@@ -70,7 +70,7 @@ function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
       return;
     }
     if (key.ctrl && input === "r") {
-      setRenameValue(names[selected.id]?.name ?? "");
+      setRenameValue(names[selected.id]?.name ?? selected.title ?? "");
       setView("rename");
     }
     if (key.ctrl && input === "d") {
@@ -252,9 +252,6 @@ function formatRow(
 function formatNameTitle(session: SessionMeta, names: SessionNameIndex): string {
   const name = names[session.id]?.name;
   const title = session.title ?? "untitled";
-  if (name && name !== title) {
-    return `${name} / ${title}`;
-  }
   return name ?? title;
 }
 
