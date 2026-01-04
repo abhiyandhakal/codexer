@@ -45,6 +45,7 @@ function App({ sessions, names, onResolve }: AppProps): JSX.Element {
     return sessions.map((session) => ({
       label: formatSessionLabel(session, names),
       value: session,
+      key: session.id,
     }));
   }, [sessions, names]);
 
@@ -84,9 +85,9 @@ function App({ sessions, names, onResolve }: AppProps): JSX.Element {
 
   if (view === "actions" && selected) {
     const items: ActionItem[] = [
-      { label: "Resume session", value: { action: "resume" } },
-      { label: "Rename session", value: { action: "rename" } },
-      { label: "Back to list", value: { action: "back" } },
+      { label: "Resume session", value: { action: "resume" }, key: "resume" },
+      { label: "Rename session", value: { action: "rename" }, key: "rename" },
+      { label: "Back to list", value: { action: "back" }, key: "back" },
     ];
 
     return (
