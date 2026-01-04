@@ -42,8 +42,10 @@ function App({ sessions, names, onResolve }: AppProps): JSX.Element {
   const [renameValue, setRenameValue] = useState("");
 
   const sessionItems = useMemo<SessionItem[]>(() => {
-    return sessions.map((session) => ({
-      label: formatSessionLabel(session, names),
+    const rows = sessions.map((session) => formatSessionRow(session, names));
+    const widths = computeColumnWidths(rows);
+    return sessions.map((session, index) => ({
+      label: formatRow(rows[index], widths),
       value: session,
       key: session.id,
     }));
@@ -92,7 +94,7 @@ function App({ sessions, names, onResolve }: AppProps): JSX.Element {
 
     return (
       <Box flexDirection="column" gap={1}>
-        <Text>{formatSessionLabel(selected, names)}</Text>
+        <Text>{formatRow(formatSessionRow(selected, names), undefined)}</Text>
         <SelectInput
           items={items}
           onSelect={(item) => {
@@ -129,14 +131,24 @@ function App({ sessions, names, onResolve }: AppProps): JSX.Element {
   );
 }
 
-function formatSessionLabel(
+type SessionRow = {
+  time: string;
+  id: string;
+  name: string;
+  cwd: string;
+};
+
+function formatSessionRow(
   session: SessionMeta,
   names: SessionNameIndex
-): string {
+): SessionRow {
   const name = names[session.id]?.name ?? session.title ?? "unnamed";
-  const time = formatRelativeTime(session.timestamp);
-  const cwd = session.cwd ? ` ${session.cwd}` : "";
-  return `${time} ${session.id} ${name}${cwd}`;
+  return {
+    time: formatRelativeTime(session.timestamp),
+    id: session.id,
+    name,
+    cwd: session.cwd ?? "",
+  };
 }
 
 function formatRelativeTime(timestamp: string | undefined): string {
@@ -177,4 +189,30 @@ function formatRelativeTime(timestamp: string | undefined): string {
     return `${days}d ago`;
   }
   return `${days}d ${hours}h ago`;
+}
+
+function computeColumnWidths(rows: SessionRow[]): Record<keyof SessionRow, number> {
+  return rows.reduce(
+    (acc, row) => {
+      acc.time = Math.max(acc.time, row.time.length);
+      acc.id = Math.max(acc.id, row.id.length);
+      acc.name = Math.max(acc.name, row.name.length);
+      acc.cwd = Math.max(acc.cwd, row.cwd.length);
+      return acc;
+    },
+    { time: 0, id: 0, name: 0, cwd: 0 }
+  );
+}
+
+function formatRow(
+  row: SessionRow,
+  widths?: Record<keyof SessionRow, number>
+): string {
+  if (!widths) {
+    return `${row.time} ${row.id} ${row.name} ${row.cwd}`.trimEnd();
+  }
+  const time = row.time.padEnd(widths.time);
+  const id = row.id.padEnd(widths.id);
+  const name = row.name.padEnd(widths.name);
+  return `${time}  ${id}  ${name}  ${row.cwd}`.trimEnd();
 }

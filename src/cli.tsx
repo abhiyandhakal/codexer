@@ -30,18 +30,19 @@ program
     const scoped = options.all ? sessions : filterSessionsByCwd(sessions, scope);
     const names = await loadSessionNames();
 
-    const limited = typeof options.limit === "number" ? scoped.slice(0, options.limit) : scoped;
+    const limited =
+      typeof options.limit === "number" ? scoped.slice(0, options.limit) : scoped;
     if (limited.length === 0) {
       console.log("No sessions found.");
       return;
     }
 
+    const rows = limited.map((session) => formatSessionRow(session, names));
+    const widths = computeColumnWidths(rows);
+    console.log(formatHeader(widths));
     for (const session of limited) {
-      const displayName = names[session.id]?.name ?? session.title ?? "unnamed";
-      const time = formatRelativeTime(session.timestamp);
-      const cwd = session.cwd ? ` ${session.cwd}` : "";
-      const name = displayName ? ` ${displayName}` : "";
-      console.log(`${time} ${session.id}${name}${cwd}`);
+      const row = formatSessionRow(session, names);
+      console.log(formatRow(row, widths));
     }
   });
 
@@ -204,4 +205,64 @@ function formatRelativeTime(timestamp: string | undefined): string {
     return `${days}d ago`;
   }
   return `${days}d ${hours}h ago`;
+}
+
+type SessionRow = {
+  time: string;
+  id: string;
+  name: string;
+  cwd: string;
+};
+
+function formatSessionRow(
+  session: SessionMeta,
+  names: Record<string, { name: string }>
+): SessionRow {
+  const name = names[session.id]?.name ?? session.title ?? "unnamed";
+  return {
+    time: formatRelativeTime(session.timestamp),
+    id: session.id,
+    name,
+    cwd: session.cwd ?? "",
+  };
+}
+
+function computeColumnWidths(rows: SessionRow[]): Record<keyof SessionRow, number> {
+  return rows.reduce(
+    (acc, row) => {
+      acc.time = Math.max(acc.time, row.time.length, "TIME".length);
+      acc.id = Math.max(acc.id, row.id.length, "SESSION".length);
+      acc.name = Math.max(acc.name, row.name.length, "NAME".length);
+      acc.cwd = Math.max(acc.cwd, row.cwd.length, "CWD".length);
+      return acc;
+    },
+    { time: 0, id: 0, name: 0, cwd: 0 }
+  );
+}
+
+function formatRow(
+  row: SessionRow,
+  widths: Record<keyof SessionRow, number>
+): string {
+  const time = row.time.padEnd(widths.time);
+  const id = row.id.padEnd(widths.id);
+  const name = row.name.padEnd(widths.name);
+  return `${time}  ${id}  ${name}  ${row.cwd}`.trimEnd();
+}
+
+function formatHeader(widths: Record<keyof SessionRow, number>): string {
+  const header = formatRow(
+    { time: "TIME", id: "SESSION", name: "NAME", cwd: "CWD" },
+    widths
+  );
+  const separator = formatRow(
+    {
+      time: "-".repeat(widths.time),
+      id: "-".repeat(widths.id),
+      name: "-".repeat(widths.name),
+      cwd: "-".repeat(widths.cwd),
+    },
+    widths
+  );
+  return `${header}\n${separator}`;
 }
