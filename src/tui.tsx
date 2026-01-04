@@ -108,7 +108,7 @@ function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
   if (view === "delete" && selected) {
     return (
       <Box flexDirection="column" gap={1}>
-        <Text>Delete stored name for {selected.id}?</Text>
+        <Text>Delete session {selected.id}?</Text>
         <Text>{formatRow(formatSessionRow(selected, names, scope), undefined)}</Text>
         <DeleteConfirmation
           onConfirm={() => {

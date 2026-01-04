@@ -7,6 +7,8 @@ import {
   filterSessionsByCwd,
   listSessions,
   loadSessionNames,
+  deleteSessionFile,
+  deleteSessionName,
   saveSessionName,
   type SessionMeta,
 } from "./sessions.js";
@@ -109,6 +111,20 @@ program.action(async () => {
     console.log(
       `Renamed ${action.session.id} to ${JSON.stringify(action.name)}`
     );
+    return;
+  }
+
+  if (action.type === "delete") {
+    try {
+      await deleteSessionFile(action.session.file);
+      await deleteSessionName(action.session.id);
+      console.log(`Deleted session ${action.session.id}`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error(`Failed to delete session: ${message}`);
+      process.exitCode = 1;
+    }
     return;
   }
 

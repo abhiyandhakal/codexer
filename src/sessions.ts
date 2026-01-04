@@ -64,6 +64,22 @@ export async function saveSessionName(
   await fs.writeFile(NAMES_FILE, JSON.stringify(next, null, 2));
 }
 
+export async function deleteSessionName(id: string): Promise<boolean> {
+  const existing = await loadSessionNames();
+  if (!existing[id]) {
+    return false;
+  }
+  const next: SessionNameIndex = { ...existing };
+  delete next[id];
+  await fs.mkdir(CODEXER_DIR, { recursive: true });
+  await fs.writeFile(NAMES_FILE, JSON.stringify(next, null, 2));
+  return true;
+}
+
+export async function deleteSessionFile(file: string): Promise<void> {
+  await fs.unlink(file);
+}
+
 function isWithin(parent: string, child: string): boolean {
   const rel = path.relative(parent, child);
   if (rel === "") {
