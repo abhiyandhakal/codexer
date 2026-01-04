@@ -1,11 +1,14 @@
 {
-  "name": "codexer",
+  "name": "@itsabhiyan/codexer",
   "version": "0.1.0",
   "description": "Wrapper CLI for Codex session management in this repo or folder",
   "type": "module",
   "bin": {
     "codexer": "dist/cli.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/cli.tsx",
