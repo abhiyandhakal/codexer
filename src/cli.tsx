@@ -37,11 +37,13 @@ program
       return;
     }
 
-    const rows = limited.map((session) => formatSessionRow(session, names));
+    const rows = limited.map((session) =>
+      formatSessionRow(session, names, scope)
+    );
     const widths = computeColumnWidths(rows);
     console.log(formatHeader(widths));
     for (const session of limited) {
-      const row = formatSessionRow(session, names);
+      const row = formatSessionRow(session, names, scope);
       console.log(formatRow(row, widths));
     }
   });
@@ -100,7 +102,7 @@ program.action(async () => {
   const sessions = await listSessions();
   const scoped = filterSessionsByCwd(sessions, scope);
   const names = await loadSessionNames();
-  const action = await runTui(scoped, names);
+  const action = await runTui(scoped, names, scope);
 
   if (action.type === "rename") {
     await saveSessionName(action.session.id, action.name);
@@ -210,20 +212,21 @@ function formatRelativeTime(timestamp: string | undefined): string {
 type SessionRow = {
   time: string;
   id: string;
-  name: string;
+  nameTitle: string;
   cwd: string;
 };
 
 function formatSessionRow(
   session: SessionMeta,
-  names: Record<string, { name: string }>
+  names: Record<string, { name: string }>,
+  scope: string
 ): SessionRow {
-  const name = names[session.id]?.name ?? session.title ?? "unnamed";
+  const nameTitle = formatNameTitle(session, names);
   return {
     time: formatRelativeTime(session.timestamp),
     id: session.id,
-    name,
-    cwd: session.cwd ?? "",
+    nameTitle,
+    cwd: formatPath(session.cwd ?? "", scope),
   };
 }
 
@@ -232,11 +235,15 @@ function computeColumnWidths(rows: SessionRow[]): Record<keyof SessionRow, numbe
     (acc, row) => {
       acc.time = Math.max(acc.time, row.time.length, "TIME".length);
       acc.id = Math.max(acc.id, row.id.length, "SESSION".length);
-      acc.name = Math.max(acc.name, row.name.length, "NAME".length);
+      acc.nameTitle = Math.max(
+        acc.nameTitle,
+        row.nameTitle.length,
+        "NAME/TITLE".length
+      );
       acc.cwd = Math.max(acc.cwd, row.cwd.length, "CWD".length);
       return acc;
     },
-    { time: 0, id: 0, name: 0, cwd: 0 }
+    { time: 0, id: 0, nameTitle: 0, cwd: 0 }
   );
 }
 
@@ -246,23 +253,51 @@ function formatRow(
 ): string {
   const time = row.time.padEnd(widths.time);
   const id = row.id.padEnd(widths.id);
-  const name = row.name.padEnd(widths.name);
-  return `${time}  ${id}  ${name}  ${row.cwd}`.trimEnd();
+  const nameTitle = row.nameTitle.padEnd(widths.nameTitle);
+  return `${time}  ${id}  ${nameTitle}  ${row.cwd}`.trimEnd();
 }
 
 function formatHeader(widths: Record<keyof SessionRow, number>): string {
   const header = formatRow(
-    { time: "TIME", id: "SESSION", name: "NAME", cwd: "CWD" },
+    { time: "TIME", id: "SESSION", nameTitle: "NAME/TITLE", cwd: "PATH" },
     widths
   );
   const separator = formatRow(
     {
       time: "-".repeat(widths.time),
       id: "-".repeat(widths.id),
-      name: "-".repeat(widths.name),
+      nameTitle: "-".repeat(widths.nameTitle),
       cwd: "-".repeat(widths.cwd),
     },
     widths
   );
   return `${header}\n${separator}`;
+}
+
+function formatNameTitle(
+  session: SessionMeta,
+  names: Record<string, { name: string }>
+): string {
+  const name = names[session.id]?.name;
+  const title = session.title ?? "untitled";
+  if (name && name !== title) {
+    return `${name} / ${title}`;
+  }
+  return name ?? title;
+}
+
+function formatPath(cwd: string, scope: string): string {
+  if (!cwd) {
+    return "";
+  }
+  const normalizedScope = path.resolve(scope);
+  const normalizedCwd = path.resolve(cwd);
+  const rel = path.relative(normalizedScope, normalizedCwd);
+  if (!rel || rel === ".") {
+    return "./";
+  }
+  if (!rel.startsWith("..") && !path.isAbsolute(rel)) {
+    return `./${rel}`;
+  }
+  return cwd;
 }

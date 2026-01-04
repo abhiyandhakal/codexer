@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import path from "node:path";
 import { Box, Text, useApp, useInput, render } from "ink";
 import SelectInput, { type Item } from "ink-select-input";
 import TextInput from "ink-text-input";
@@ -12,6 +13,7 @@ export type TuiAction =
 type AppProps = {
   sessions: SessionMeta[];
   names: SessionNameIndex;
+  scope: string;
   onResolve: (action: TuiAction) => void;
 };
 
@@ -23,11 +25,12 @@ type SessionItem = Item<SessionMeta>;
 
 export async function runTui(
   sessions: SessionMeta[],
-  names: SessionNameIndex
+  names: SessionNameIndex,
+  scope: string
 ): Promise<TuiAction> {
   return new Promise((resolve) => {
     const instance = render(
-      <App sessions={sessions} names={names} onResolve={resolve} />
+      <App sessions={sessions} names={names} scope={scope} onResolve={resolve} />
     );
     instance.waitUntilExit().catch(() => {
       resolve({ type: "exit" });
@@ -35,21 +38,23 @@ export async function runTui(
   });
 }
 
-function App({ sessions, names, onResolve }: AppProps): JSX.Element {
+function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
   const { exit } = useApp();
   const [view, setView] = useState<View>("sessions");
   const [selected, setSelected] = useState<SessionMeta | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   const sessionItems = useMemo<SessionItem[]>(() => {
-    const rows = sessions.map((session) => formatSessionRow(session, names));
+    const rows = sessions.map((session) =>
+      formatSessionRow(session, names, scope)
+    );
     const widths = computeColumnWidths(rows);
     return sessions.map((session, index) => ({
       label: formatRow(rows[index], widths),
       value: session,
       key: session.id,
     }));
-  }, [sessions, names]);
+  }, [sessions, names, scope]);
 
   useInput((input, key) => {
     if (key.escape || input === "q") {
@@ -94,7 +99,9 @@ function App({ sessions, names, onResolve }: AppProps): JSX.Element {
 
     return (
       <Box flexDirection="column" gap={1}>
-        <Text>{formatRow(formatSessionRow(selected, names), undefined)}</Text>
+        <Text>
+          {formatRow(formatSessionRow(selected, names, scope), undefined)}
+        </Text>
         <SelectInput
           items={items}
           onSelect={(item) => {
@@ -134,20 +141,21 @@ function App({ sessions, names, onResolve }: AppProps): JSX.Element {
 type SessionRow = {
   time: string;
   id: string;
-  name: string;
+  nameTitle: string;
   cwd: string;
 };
 
 function formatSessionRow(
   session: SessionMeta,
-  names: SessionNameIndex
+  names: SessionNameIndex,
+  scope: string
 ): SessionRow {
-  const name = names[session.id]?.name ?? session.title ?? "unnamed";
+  const nameTitle = formatNameTitle(session, names);
   return {
     time: formatRelativeTime(session.timestamp),
     id: session.id,
-    name,
-    cwd: session.cwd ?? "",
+    nameTitle,
+    cwd: formatPath(session.cwd ?? "", scope),
   };
 }
 
@@ -196,11 +204,11 @@ function computeColumnWidths(rows: SessionRow[]): Record<keyof SessionRow, numbe
     (acc, row) => {
       acc.time = Math.max(acc.time, row.time.length);
       acc.id = Math.max(acc.id, row.id.length);
-      acc.name = Math.max(acc.name, row.name.length);
+      acc.nameTitle = Math.max(acc.nameTitle, row.nameTitle.length);
       acc.cwd = Math.max(acc.cwd, row.cwd.length);
       return acc;
     },
-    { time: 0, id: 0, name: 0, cwd: 0 }
+    { time: 0, id: 0, nameTitle: 0, cwd: 0 }
   );
 }
 
@@ -209,10 +217,35 @@ function formatRow(
   widths?: Record<keyof SessionRow, number>
 ): string {
   if (!widths) {
-    return `${row.time} ${row.id} ${row.name} ${row.cwd}`.trimEnd();
+    return `${row.time} ${row.id} ${row.nameTitle} ${row.cwd}`.trimEnd();
   }
   const time = row.time.padEnd(widths.time);
   const id = row.id.padEnd(widths.id);
-  const name = row.name.padEnd(widths.name);
-  return `${time}  ${id}  ${name}  ${row.cwd}`.trimEnd();
+  const nameTitle = row.nameTitle.padEnd(widths.nameTitle);
+  return `${time}  ${id}  ${nameTitle}  ${row.cwd}`.trimEnd();
+}
+
+function formatNameTitle(session: SessionMeta, names: SessionNameIndex): string {
+  const name = names[session.id]?.name;
+  const title = session.title ?? "untitled";
+  if (name && name !== title) {
+    return `${name} / ${title}`;
+  }
+  return name ?? title;
+}
+
+function formatPath(cwd: string, scope: string): string {
+  if (!cwd) {
+    return "";
+  }
+  const normalizedScope = path.resolve(scope);
+  const normalizedCwd = path.resolve(cwd);
+  const rel = path.relative(normalizedScope, normalizedCwd);
+  if (!rel || rel === ".") {
+    return "./";
+  }
+  if (!rel.startsWith("..") && !path.isAbsolute(rel)) {
+    return `./${rel}`;
+  }
+  return cwd;
 }
