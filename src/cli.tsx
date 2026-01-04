@@ -61,6 +61,13 @@ program.action(async () => {
     return;
   }
 
+  if (action.type === "new") {
+    const args = action.prompt ? [action.prompt] : [];
+    const code = await runCodex(args);
+    process.exitCode = code;
+    return;
+  }
+
   if (action.type === "resume") {
     await resumeWithSession(action.session, undefined);
     return;
