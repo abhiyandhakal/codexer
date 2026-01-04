@@ -133,7 +133,7 @@ function formatSessionLabel(
   session: SessionMeta,
   names: SessionNameIndex
 ): string {
-  const name = names[session.id]?.name ?? "unnamed";
+  const name = names[session.id]?.name ?? session.title ?? "unnamed";
   const time = session.timestamp
     ? new Date(session.timestamp).toISOString()
     : "unknown";

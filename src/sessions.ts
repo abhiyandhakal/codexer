@@ -7,6 +7,7 @@ export type SessionMeta = {
   timestamp: string;
   cwd: string;
   file: string;
+  title?: string;
   git?: {
     repository_url?: string | null;
     branch?: string | null;
@@ -104,7 +105,8 @@ async function listSessionFiles(dir: string): Promise<string[]> {
 
 async function readSessionMeta(file: string): Promise<SessionMeta | null> {
   try {
-    const line = await readFirstLine(file);
+    const lines = await readFirstLines(file, 65536);
+    const line = lines[0];
     if (!line) {
       return null;
     }
@@ -126,30 +128,85 @@ async function readSessionMeta(file: string): Promise<SessionMeta | null> {
       return null;
     }
 
+    const title = extractTitle(lines);
+
     return {
       id: parsed.payload.id,
       timestamp: parsed.payload.timestamp ?? "",
       cwd: parsed.payload.cwd ?? "",
       git: parsed.payload.git ?? null,
       file,
+      title,
     };
   } catch {
     return null;
   }
 }
 
-async function readFirstLine(file: string): Promise<string> {
+async function readFirstLines(file: string, maxBytes: number): Promise<string[]> {
   const handle = await fs.open(file, "r");
   try {
-    const buffer = Buffer.alloc(65536);
+    const buffer = Buffer.alloc(maxBytes);
     const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
     const chunk = buffer.slice(0, bytesRead).toString("utf8");
-    const newlineIndex = chunk.indexOf("\n");
-    if (newlineIndex === -1) {
-      return chunk.trim();
-    }
-    return chunk.slice(0, newlineIndex).trim();
+    return chunk
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
   } finally {
     await handle.close();
   }
+}
+
+function extractTitle(lines: string[]): string | undefined {
+  for (const line of lines) {
+    try {
+      const parsed = JSON.parse(line) as {
+        type?: string;
+        payload?: {
+          type?: string;
+          role?: string;
+          content?: Array<{ type?: string; text?: string }>;
+        };
+      };
+      if (
+        parsed.type !== "response_item" ||
+        parsed.payload?.type !== "message" ||
+        parsed.payload?.role !== "user"
+      ) {
+        continue;
+      }
+
+      const text = parsed.payload?.content
+        ?.filter((item) => item.type === "input_text")
+        .map((item) => item.text ?? "")
+        .join(" ")
+        .trim();
+
+      if (!text) {
+        continue;
+      }
+
+      if (text.includes("<environment_context>")) {
+        continue;
+      }
+
+      return truncateTitle(normalizeWhitespace(text), 60);
+    } catch {
+      continue;
+    }
+  }
+
+  return undefined;
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function truncateTitle(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength - 3)}...`;
 }

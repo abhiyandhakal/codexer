@@ -37,7 +37,7 @@ program
     }
 
     for (const session of limited) {
-      const displayName = names[session.id]?.name ?? "";
+      const displayName = names[session.id]?.name ?? session.title ?? "unnamed";
       const time = session.timestamp ? new Date(session.timestamp).toISOString() : "";
       const cwd = session.cwd ? ` ${session.cwd}` : "";
       const name = displayName ? ` ${displayName}` : "";
