@@ -9,6 +9,14 @@
   "files": [
     "dist"
   ],
+  "keywords": [
+    "codex",
+    "codex-cli",
+    "cli",
+    "tui",
+    "sessions",
+    "productivity"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/cli.tsx",
