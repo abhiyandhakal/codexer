@@ -1,6 +1,6 @@
 # codexer
 
-Wrapper CLI for Codex session management.
+Wrapper CLI for Codex session management, scoped to the current repo or folder.
 
 ## Development
 
@@ -9,5 +9,7 @@ Wrapper CLI for Codex session management.
 
 ## Usage
 
-- `npx codexer resume`
+- `npx codexer` (resume latest session in this repo or directory)
+- `npx codexer list` (show sessions scoped to this repo or directory)
+- `npx codexer resume [sessionId] [prompt...]`
 - `npx codexer rename <sessionId> <name...>`
