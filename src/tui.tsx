@@ -9,6 +9,7 @@ export type TuiAction =
   | { type: "resume"; session: SessionMeta }
   | { type: "rename"; session: SessionMeta; name: string }
   | { type: "delete"; session: SessionMeta }
+  | { type: "new" }
   | { type: "exit" };
 
 type AppProps = {
@@ -66,15 +67,25 @@ function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
       onResolve({ type: "exit" });
       exit();
     }
-    if (!selected || view !== "sessions") {
+    if (view !== "sessions") {
       return;
     }
     if (key.ctrl && input === "r") {
+      if (!selected) {
+        return;
+      }
       setRenameValue(names[selected.id]?.name ?? selected.title ?? "");
       setView("rename");
     }
     if (key.ctrl && input === "d") {
+      if (!selected) {
+        return;
+      }
       setView("delete");
+    }
+    if (key.ctrl && input === "n") {
+      onResolve({ type: "new" });
+      exit();
     }
   });
 
@@ -138,7 +149,7 @@ function App({ sessions, names, scope, onResolve }: AppProps): JSX.Element {
         }}
       />
       <Text dimColor>
-        Use arrows + enter. Ctrl+r rename, ctrl+d delete, q/esc exit.
+        Use arrows + enter. Ctrl+n new, ctrl+r rename, ctrl+d delete, q/esc exit.
       </Text>
     </Box>
   );
