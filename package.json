@@ -1,6 +1,6 @@
 {
   "name": "@itsabhiyan/codexer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Wrapper CLI for Codex session management in this repo or folder",
   "type": "module",
   "bin": {
