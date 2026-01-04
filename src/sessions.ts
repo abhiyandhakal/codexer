@@ -187,7 +187,7 @@ function extractTitle(lines: string[]): string | undefined {
         continue;
       }
 
-      if (text.includes("<environment_context>")) {
+      if (isIgnorablePrompt(text)) {
         continue;
       }
 
@@ -209,4 +209,18 @@ function truncateTitle(value: string, maxLength: number): string {
     return value;
   }
   return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function isIgnorablePrompt(text: string): boolean {
+  const normalized = text.trim();
+  if (normalized.includes("<environment_context>")) {
+    return true;
+  }
+  if (normalized.includes("AGENTS.md") || normalized.includes("<INSTRUCTIONS>")) {
+    return true;
+  }
+  if (normalized.includes("## Skills") || normalized.includes("These skills are discovered")) {
+    return true;
+  }
+  return false;
 }
