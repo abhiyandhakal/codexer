@@ -134,9 +134,47 @@ function formatSessionLabel(
   names: SessionNameIndex
 ): string {
   const name = names[session.id]?.name ?? session.title ?? "unnamed";
-  const time = session.timestamp
-    ? new Date(session.timestamp).toISOString()
-    : "unknown";
+  const time = formatRelativeTime(session.timestamp);
   const cwd = session.cwd ? ` ${session.cwd}` : "";
   return `${time} ${session.id} ${name}${cwd}`;
+}
+
+function formatRelativeTime(timestamp: string | undefined): string {
+  if (!timestamp) {
+    return "unknown";
+  }
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return "unknown";
+  }
+  const now = Date.now();
+  const diffMs = Math.max(0, now - date.getTime());
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diffMs < minute) {
+    return "just now";
+  }
+  if (diffMs < hour) {
+    const mins = Math.floor(diffMs / minute);
+    return `${mins}m ago`;
+  }
+  if (diffMs < day) {
+    const hours = Math.floor(diffMs / hour);
+    const mins = Math.floor((diffMs % hour) / minute);
+    if (hours === 1 && mins === 0) {
+      return "1h ago";
+    }
+    if (mins === 0) {
+      return `${hours}h ago`;
+    }
+    return `${hours}h ${mins}m ago`;
+  }
+  const days = Math.floor(diffMs / day);
+  const hours = Math.floor((diffMs % day) / hour);
+  if (hours === 0) {
+    return `${days}d ago`;
+  }
+  return `${days}d ${hours}h ago`;
 }
