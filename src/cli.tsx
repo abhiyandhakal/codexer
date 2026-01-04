@@ -10,6 +10,7 @@ import {
   saveSessionName,
   type SessionMeta,
 } from "./sessions.js";
+import { runTui } from "./tui.js";
 
 const program = new Command();
 
@@ -97,13 +98,21 @@ program.action(async () => {
   const scope = await resolveScope();
   const sessions = await listSessions();
   const scoped = filterSessionsByCwd(sessions, scope);
-  const latest = scoped[0];
-  if (latest?.id) {
-    await resumeWithSession(latest, undefined);
+  const names = await loadSessionNames();
+  const action = await runTui(scoped, names);
+
+  if (action.type === "rename") {
+    await saveSessionName(action.session.id, action.name);
+    console.log(
+      `Renamed ${action.session.id} to ${JSON.stringify(action.name)}`
+    );
     return;
   }
-  const code = await runCodex(["resume"]);
-  process.exitCode = code;
+
+  if (action.type === "resume") {
+    await resumeWithSession(action.session, undefined);
+    return;
+  }
 });
 
 program.parse();

@@ -9,7 +9,7 @@ Wrapper CLI for Codex session management, scoped to the current repo or folder.
 
 ## Usage
 
-- `npx codexer` (resume latest session in this repo or directory)
+- `npx codexer` (interactive TUI session picker)
 - `npx codexer list` (show sessions scoped to this repo or directory)
 - `npx codexer resume [sessionId] [prompt...]`
 - `npx codexer rename <sessionId> <name...>`
