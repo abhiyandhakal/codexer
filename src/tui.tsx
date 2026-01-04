@@ -176,7 +176,7 @@ function formatSessionRow(
 ): SessionRow {
   const nameTitle = formatNameTitle(session, names);
   return {
-    time: formatRelativeTime(session.timestamp),
+    time: formatRelativeTime(session.lastModified),
     id: session.id,
     nameTitle,
     cwd: formatPath(session.cwd ?? "", scope),

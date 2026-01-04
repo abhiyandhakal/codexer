@@ -5,6 +5,7 @@ import os from "node:os";
 export type SessionMeta = {
   id: string;
   timestamp: string;
+  lastModified: string;
   cwd: string;
   file: string;
   title?: string;
@@ -34,7 +35,9 @@ export async function listSessions(): Promise<SessionMeta[]> {
   }
 
   sessions.sort((a, b) => {
-    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    return (
+      new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+    );
   });
 
   return sessions;
@@ -126,6 +129,8 @@ async function readSessionMeta(file: string): Promise<SessionMeta | null> {
     if (!line) {
       return null;
     }
+    const stats = await fs.stat(file);
+    const lastModified = stats.mtime.toISOString();
     const parsed = JSON.parse(line) as {
       type?: string;
       payload?: {
@@ -149,6 +154,7 @@ async function readSessionMeta(file: string): Promise<SessionMeta | null> {
     return {
       id: parsed.payload.id,
       timestamp: parsed.payload.timestamp ?? "",
+      lastModified,
       cwd: parsed.payload.cwd ?? "",
       git: parsed.payload.git ?? null,
       file,

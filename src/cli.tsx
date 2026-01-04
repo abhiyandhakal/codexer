@@ -39,9 +39,9 @@ program
       return;
     }
 
-    const rows = limited.map((session) =>
-      formatSessionRow(session, names, scope)
-    );
+      const rows = limited.map((session) =>
+        formatSessionRow(session, names, scope)
+      );
     const widths = computeColumnWidths(rows);
     console.log(formatHeader(widths));
     for (const session of limited) {
@@ -239,7 +239,7 @@ function formatSessionRow(
 ): SessionRow {
   const nameTitle = formatNameTitle(session, names);
   return {
-    time: formatRelativeTime(session.timestamp),
+    time: formatRelativeTime(session.lastModified),
     id: session.id,
     nameTitle,
     cwd: formatPath(session.cwd ?? "", scope),
