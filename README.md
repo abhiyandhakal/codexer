@@ -1,3 +1,7 @@
+**Note**: Codex CLI has already solved this issue, so no need to rely on this buggy wrapper! I'm archiving this repo on 19th Jan 2026.
+
+---
+
 # codexer
 
 Wrapper CLI for Codex session management, scoped to the current repo or folder.
